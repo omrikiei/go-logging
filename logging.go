@@ -30,7 +30,7 @@ var initialized uint32
 var mu sync.Mutex
 
 // LoggerInterface is used for the implementation of loggers with the service
-// I really don't see any reason not to used the default logger with it's great formatting, but
+// I really don't see any reason not to use the default logger with it's great formatting, but
 // you can implement this interface.
 type LoggerInterface interface {
 	AddHandler(handler *io.Writer)
@@ -83,7 +83,7 @@ func (h *LogHandler) SetFormatter(pattern string) *LogHandler {
 
 func (h *LogHandler) emit(message *formatter.LogMessage) {
 	logFormatter := *h.Formatter
-	logFormatter.Format(h.Writer, *message)
+	logFormatter.Format(h.Writer, message)
 }
 
 // NewHandler will receive a loglevel(either int(0-4) or string) and an io.Writer implementer

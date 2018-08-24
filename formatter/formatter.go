@@ -73,7 +73,7 @@ func NewFormatter(pattern string) *LogFormatter {
 }
 
 // Format is the function that the formatter uses to format a string and write it to an io.Writer
-func (logFormatter *LogFormatter) Format(writer *io.Writer, message LogMessage) {
+func (logFormatter *LogFormatter) Format(writer *io.Writer, message *LogMessage) {
 	err := logFormatter.Template.Execute(*writer, message)
 	if err != nil {
 		panic(err)
