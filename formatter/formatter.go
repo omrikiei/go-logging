@@ -58,19 +58,21 @@ type LogMessage struct {
 	LevelNum int
 }
 
-// LogFormatter represents a formatter that parses log messages
+// LogFormatter is a formatter that parses log messages
+// it implements a template based on the "text/template" package
 type LogFormatter struct {
 	Template *template.Template
 }
 
-// Return a new formatter
+// NewFormatter is the constructor for a LogFormatter, it
+// accepts a pattern and binds the log formatting functions and pattern to the LogFormatters template
 func NewFormatter(pattern string) *LogFormatter {
 	return &LogFormatter{
 		template.Must(template.New("logTemplate").Funcs(functions).Parse(pattern)),
 	}
 }
 
-// Format is the function that the formatter uses to format a string and print it
+// Format is the function that the formatter uses to format a string and write it to an io.Writer
 func (logFormatter *LogFormatter) Format(writer *io.Writer, message LogMessage) {
 	err := logFormatter.Template.Execute(*writer, message)
 	if err != nil {
@@ -81,5 +83,5 @@ func (logFormatter *LogFormatter) Format(writer *io.Writer, message LogMessage) 
 // DefaultFormatterPattern is the pattern used when no formatter is set
 var DefaultFormatterPattern = "{{ asctime }}; {{ fileline }}; {{.Level}}; {{.Message}}"
 
-// DefaultFormatter is the default formatter
+// DefaultFormatter is the default formatter that will be used by the logging module, it implements the DefaultFormatterPattern
 var DefaultFormatter = NewFormatter(DefaultFormatterPattern)

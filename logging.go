@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/omrikiei/go-logging/formatter"
@@ -28,7 +29,9 @@ var logLevels = map[string]int{
 var initialized uint32
 var mu sync.Mutex
 
-// Interface is used for the implementation of loggers with the service
+// LoggerInterface is used for the implementation of loggers with the service
+// I really don't see any reason not to used the default logger with it's great formatting, but
+// you can implement this interface.
 type LoggerInterface interface {
 	AddHandler(handler *io.Writer)
 	Debug(message string, a ...interface{})
@@ -39,7 +42,7 @@ type LoggerInterface interface {
 	SetFormatter(template string, a ...interface{})
 }
 
-// rootLogger implements the LoggerInterface and is used to log messages
+// rootLogger implements the ;oggerInterface and is used to log messages
 type rootLogger struct {
 	handlers  []*LogHandler
 	formatter string
@@ -48,8 +51,7 @@ type rootLogger struct {
 var instance *rootLogger
 var once sync.Once
 
-// Get provides an instance getter for the logging object
-func Get() *rootLogger {
+func get() *rootLogger {
 	once.Do(func() {
 		instance = &rootLogger{}
 	})
@@ -58,14 +60,22 @@ func Get() *rootLogger {
 
 // var loggers = map[string]LoggerInterface{}
 
-// LogHandler provides an output formatter that implements io.Writer and a logging level
+// LogHandler provides an output formatter that implements io.Writer, logging level and a formatter
+// The best way to instantiate it is by using the NewHandler function:
+// 			handler, err := logging.NewHandler(logging.DEBUG, os.Stdout)
+//			if err != nil {
+//				panic("got an error")
+//			}
+// Once a handler is created with can pass is to the LoggerInterface implementation with AddHandler
 type LogHandler struct {
 	Writer    *io.Writer
 	Level     int
 	Formatter *formatter.LogFormatter
 }
 
-// Sets a new formatter to the log handler
+// SetFormatter sets a new formatter to the log handler
+// receives a pattern string which implements the same logic of "text/template"
+// This template will be used when emitting new log records
 func (h *LogHandler) SetFormatter(pattern string) *LogHandler {
 	h.Formatter = formatter.NewFormatter(pattern)
 	return h
@@ -76,7 +86,8 @@ func (h *LogHandler) emit(message *formatter.LogMessage) {
 	logFormatter.Format(h.Writer, *message)
 }
 
-// NewHandler instance
+// NewHandler will receive a loglevel(either int(0-4) or string) and an io.Writer implementer
+// and return an address to a LogHandler instance
 func NewHandler(level interface{}, w io.Writer) (*LogHandler, error) {
 	switch level.(type) {
 	case int:
@@ -98,6 +109,8 @@ func (l *rootLogger) AddHandler(h *LogHandler) {
 	l.handlers = append(l.handlers, h)
 }
 
+var defaultHandler, err = NewHandler(DEBUG, os.Stdout)
+
 func formatLevel(levelno int, level, message string, args ...interface{}) *formatter.LogMessage {
 	return &formatter.LogMessage{
 		fmt.Sprintf(message+"\n", args...),
@@ -106,74 +119,66 @@ func formatLevel(levelno int, level, message string, args ...interface{}) *forma
 	}
 }
 
-func (l *rootLogger) Debug(message string, a ...interface{}) {
-	for _, handler := range l.handlers {
-		if handler.Level <= DEBUG {
-			handler.emit(formatLevel(DEBUG, "DEBUG", message, a...))
+func dispatchMessage(handlers []*LogHandler, levelNum int, level string, message string, args ...interface{}) {
+	if len(handlers) == 0 {
+		handlers = []*LogHandler{defaultHandler}
+	}
+	for _, handler := range handlers {
+		if handler.Level <= levelNum {
+			handler.emit(formatLevel(levelNum, level, message, args...))
 		}
 	}
+}
+
+func (l *rootLogger) Debug(message string, a ...interface{}) {
+	dispatchMessage(l.handlers, DEBUG, "DEBUG", message, a...)
 }
 
 func (l *rootLogger) Info(message string, a ...interface{}) {
-	for _, handler := range l.handlers {
-		if handler.Level <= INFO {
-			handler.emit(formatLevel(INFO, "INFO", message, a...))
-		}
-	}
+	dispatchMessage(l.handlers, INFO, "INFO", message, a...)
 }
 
 func (l *rootLogger) Warn(message string, a ...interface{}) {
-	for _, handler := range l.handlers {
-		if handler.Level <= WARN {
-			handler.emit(formatLevel(WARN, "WARNING", message, a...))
-		}
-	}
+	dispatchMessage(l.handlers, WARN, "WARNING", message, a...)
 }
 
 func (l *rootLogger) Error(message string, a ...interface{}) {
-	for _, handler := range l.handlers {
-		if handler.Level <= ERROR {
-			handler.emit(formatLevel(ERROR, "ERROR", message, a...))
-		}
-	}
+	dispatchMessage(l.handlers, ERROR, "ERROR", message, a...)
 }
 
 func (l *rootLogger) Fatal(message string, a ...interface{}) {
-	for _, handler := range l.handlers {
-		if handler.Level <= FATAL {
-			handler.emit(formatLevel(FATAL, "FATAL", message, a...))
-		}
-	}
+	dispatchMessage(l.handlers, FATAL, "FATAL", message, a...)
 }
 
 // Indirect calls to log/handlers from the package itself will be directed at the root logger
 
-// AddHandler called from the looging package will invoke in the rootLogger
+// AddHandler will receive a pointer to a log handler and
+// add this handler to the logging module, we will log to multiple loggers
 func AddHandler(h *LogHandler) {
-	Get().AddHandler(h)
+	get().AddHandler(h)
 }
 
-// Debug is called from the package and implements in the rootLogger instance
+// Debug will emit a debug message to the handlers that are configured to log debug messages
 func Debug(message string, a ...interface{}) {
-	Get().Debug(message, a...)
+	get().Debug(message, a...)
 }
 
-// Info is called from the package and implements in the rootLogger instance
+// Info will emit a debug message to the handlers that are configured to log info messages
 func Info(message string, a ...interface{}) {
-	Get().Info(message, a...)
+	get().Info(message, a...)
 }
 
-// Warn is called from the package and implements in the rootLogger instance
+// Warn will emit a debug message to the handlers that are configured to log warning messages
 func Warn(message string, a ...interface{}) {
-	Get().Warn(message, a...)
+	get().Warn(message, a...)
 }
 
-// Error is called from the package and implements in the rootLogger instance
+// Error will emit a debug message to the handlers that are configured to log error messages
 func Error(message string, a ...interface{}) {
-	Get().Error(message, a...)
+	get().Error(message, a...)
 }
 
-// Fatal is called from the package and implements in the rootLogger instance
+// Fatal will emit a debug message to the handlers that are configured to log fatal messages
 func Fatal(message string, a ...interface{}) {
-	Get().Fatal(message, a...)
+	get().Fatal(message, a...)
 }
