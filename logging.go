@@ -42,7 +42,7 @@ type LoggerInterface interface {
 	SetFormatter(template string, a ...interface{})
 }
 
-// rootLogger implements the ;oggerInterface and is used to log messages
+// rootLogger implements the loggerInterface and is used to log messages
 type rootLogger struct {
 	handlers  []*LogHandler
 	formatter string
@@ -76,9 +76,14 @@ type LogHandler struct {
 // SetFormatter sets a new formatter to the log handler
 // receives a pattern string which implements the same logic of "text/template"
 // This template will be used when emitting new log records
-func (h *LogHandler) SetFormatter(pattern string) *LogHandler {
-	h.Formatter = formatter.NewFormatter(pattern)
-	return h
+func (h *LogHandler) SetFormatter(pattern string) (*LogHandler, error) {
+	handlerFormatter, err := formatter.New(pattern)
+	if err != nil {
+		log.Printf("logging package failed to create and set a new formatter from pattern: %s", pattern)
+		return h, err
+	}
+	h.Formatter = handlerFormatter
+	return h, nil
 }
 
 func (h *LogHandler) emit(message *formatter.LogMessage) {
@@ -92,12 +97,12 @@ func NewHandler(level interface{}, w io.Writer) (*LogHandler, error) {
 	switch level.(type) {
 	case int:
 		if level.(int) < DEBUG || level.(int) > FATAL {
-			log.Fatal("Level is not supported, use INFO/DEBUG/WARN/ERROR/FATAL.")
+			log.Print("Level is not supported, use INFO/DEBUG/WARN/ERROR/FATAL.")
 		}
 		return &LogHandler{Writer: &w, Level: level.(int), Formatter: formatter.DefaultFormatter}, nil
 	case string:
 		if _, ok := logLevels[level.(string)]; !ok {
-			log.Fatal("Level is not supported, use INFO/DEBUG/WARN/ERROR/FATAL.")
+			log.Print("Level is not supported, use INFO/DEBUG/WARN/ERROR/FATAL.")
 		}
 		return &LogHandler{Writer: &w, Level: logLevels[level.(string)], Formatter: formatter.DefaultFormatter}, nil
 	default:
@@ -113,9 +118,9 @@ var defaultHandler, err = NewHandler(DEBUG, os.Stdout)
 
 func formatLevel(levelno int, level, message string, args ...interface{}) *formatter.LogMessage {
 	return &formatter.LogMessage{
-		fmt.Sprintf(message+"\n", args...),
-		level,
-		levelno,
+		Message:  fmt.Sprintf(message+"\n", args...),
+		Level:    level,
+		LevelNum: levelno,
 	}
 }
 
