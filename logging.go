@@ -6,16 +6,14 @@ import (
 	"log"
 	"os"
 	"sync"
-
-	"github.com/omrikiei/go-logging/formatter"
 )
 
 const (
-	DEBUG = 0
-	INFO  = 1
-	WARN  = 2
-	ERROR = 3
-	FATAL = 4
+	DEBUG = iota
+	INFO
+	WARN
+	ERROR
+	FATAL
 )
 
 var logLevels = map[string]int{
@@ -70,14 +68,14 @@ func get() *rootLogger {
 type LogHandler struct {
 	Writer    *io.Writer
 	Level     int
-	Formatter *formatter.LogFormatter
+	Formatter *LogFormatter
 }
 
 // SetFormatter sets a new formatter to the log handler
 // receives a pattern string which implements the same logic of "text/template"
 // This template will be used when emitting new log records
 func (h *LogHandler) SetFormatter(pattern string) (*LogHandler, error) {
-	handlerFormatter, err := formatter.New(pattern)
+	handlerFormatter, err := NewFormatter(pattern)
 	if err != nil {
 		log.Printf("logging package failed to create and set a new formatter from pattern: %s", pattern)
 		return h, err
@@ -86,7 +84,7 @@ func (h *LogHandler) SetFormatter(pattern string) (*LogHandler, error) {
 	return h, nil
 }
 
-func (h *LogHandler) emit(message *formatter.LogMessage) {
+func (h *LogHandler) emit(message *LogMessage) {
 	logFormatter := *h.Formatter
 	logFormatter.Format(h.Writer, message)
 }
@@ -99,14 +97,14 @@ func NewHandler(level interface{}, w io.Writer) (*LogHandler, error) {
 		if level.(int) < DEBUG || level.(int) > FATAL {
 			log.Print("Level is not supported, use INFO/DEBUG/WARN/ERROR/FATAL.")
 		}
-		return &LogHandler{Writer: &w, Level: level.(int), Formatter: formatter.DefaultFormatter}, nil
+		return &LogHandler{Writer: &w, Level: level.(int), Formatter: DefaultFormatter}, nil
 	case string:
 		if _, ok := logLevels[level.(string)]; !ok {
 			log.Print("Level is not supported, use INFO/DEBUG/WARN/ERROR/FATAL.")
 		}
-		return &LogHandler{Writer: &w, Level: logLevels[level.(string)], Formatter: formatter.DefaultFormatter}, nil
+		return &LogHandler{Writer: &w, Level: logLevels[level.(string)], Formatter: DefaultFormatter}, nil
 	default:
-		return &LogHandler{Writer: &w, Level: DEBUG, Formatter: formatter.DefaultFormatter}, nil
+		return &LogHandler{Writer: &w, Level: DEBUG, Formatter: DefaultFormatter}, nil
 	}
 }
 
@@ -116,8 +114,8 @@ func (l *rootLogger) AddHandler(h *LogHandler) {
 
 var defaultHandler, err = NewHandler(DEBUG, os.Stdout)
 
-func formatLevel(levelno int, level, message string, args ...interface{}) *formatter.LogMessage {
-	return &formatter.LogMessage{
+func formatLevel(levelno int, level, message string, args ...interface{}) *LogMessage {
+	return &LogMessage{
 		Message:  fmt.Sprintf(message+"\n", args...),
 		Level:    level,
 		LevelNum: levelno,

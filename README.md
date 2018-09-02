@@ -21,7 +21,6 @@ import (
 	"os"
 
 	"github.com/omrikiei/go-logging"
-	"github.com/omrikiei/go-logging/formatter"
 )
 
 func main() {
@@ -42,7 +41,7 @@ func main() {
 	logging.Warn("Testing a warning meesage")
 	logging.Error("Testing an error message")
 	// Return to the previous formatter
-	handler.SetFormatter(formatter.DefaultFormatterPattern)
+	handler.SetFormatter(logging.DefaultFormatterPattern)
 	str := "hello"
 	logging.Debug("Testing a debug message with arguments %s:%d", str, 0)
 	logging.Info("Testing an info message with arguments %s:%d", str, 1)

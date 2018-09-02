@@ -1,4 +1,4 @@
-package formatter
+package logging
 
 import (
 	"fmt"
@@ -71,7 +71,7 @@ type LogFormatter struct {
 
 // New is the constructor for a LogFormatter, it
 // accepts a pattern and binds the log formatting functions and pattern to the LogFormatters template
-func New(pattern string) (*LogFormatter, error) {
+func NewFormatter(pattern string) (*LogFormatter, error) {
 	template, err := template.New("logTemplate").Funcs(functions).Parse(pattern)
 	if err != nil {
 		return nil, err
@@ -93,4 +93,4 @@ func (logFormatter *LogFormatter) Format(writer *io.Writer, message *LogMessage)
 const DefaultFormatterPattern = "{{ asctime }}; {{ fileline }}; {{.Level}}; {{.Message}}"
 
 // DefaultFormatter is the default formatter that will be used by the logging module, it implements the DefaultFormatterPattern
-var DefaultFormatter, _ = New(DefaultFormatterPattern)
+var DefaultFormatter, _ = NewFormatter(DefaultFormatterPattern)
